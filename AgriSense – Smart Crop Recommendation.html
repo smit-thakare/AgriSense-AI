@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AgriSense – Smart Crop Recommendation</title>
+<style>
+:root{--bg:#f6f8f3;--card:#fff;--text:#1d2a1f;--muted:#5d6b5f;--accent:#2e7d32;--accent2:#e8f3e6;--border:#dbe3d6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101712;--card:#18221a;--text:#e6efe6;--muted:#9bad9d;--accent:#6fcf76;--accent2:#1f3022;--border:#2a382c}}
+:root[data-theme="dark"]{--bg:#101712;--card:#18221a;--text:#e6efe6;--muted:#9bad9d;--accent:#6fcf76;--accent2:#1f3022;--border:#2a382c}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+header{padding:56px 0 32px;text-align:center}
+.badge{display:inline-block;background:var(--accent2);color:var(--accent);padding:4px 12px;border-radius:99px;font-size:13px;font-weight:600}
+h1{font-size:clamp(30px,6vw,46px);margin:14px 0 10px;line-height:1.15}
+header p{color:var(--muted);max-width:600px;margin:0 auto;font-size:17px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px}
+h2{margin:0 0 16px;font-size:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+label span{float:right;color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+button{font:inherit;cursor:pointer;border-radius:10px;padding:10px 18px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+:root[data-theme="dark"] button.primary{color:#0b140c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button.primary{color:#0b140c}}
+#result{display:none}
+.top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.emoji{font-size:44px}
+.top h3{margin:0;font-size:26px;text-transform:capitalize}
+.top small{color:var(--muted)}
+.bar{margin:10px 0}
+.bar div.l{display:flex;justify-content:space-between;font-size:14px;text-transform:capitalize}
+.bar div.t{height:8px;background:var(--accent2);border-radius:99px;overflow:hidden;margin-top:4px}
+.bar div.f{height:100%;background:var(--accent);border-radius:99px;transition:width .5s}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.steps div{background:var(--accent2);border-radius:12px;padding:14px}
+.steps b{display:block;margin-bottom:4px}
+.note{color:var(--muted);font-size:14px}
+.drop{border:2px dashed var(--border);border-radius:14px;padding:22px;text-align:center;background:var(--accent2)}
+.neg{color:#d9534f}
+#pres{display:none;margin-top:18px}
+#pres ul{margin:8px 0 0;padding-left:20px}
+.f{width:100%;font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+#yres{display:none;margin-top:18px}
+.big{font-size:34px;font-weight:700;color:var(--accent);line-height:1.2}
+#yres ul{margin:8px 0 0;padding-left:20px}
+#pv{display:none;max-width:100%;max-height:260px;border-radius:12px;margin:14px auto 0}
+button:disabled{opacity:.5;cursor:not-allowed}
+#dres{display:none;margin-top:18px}
+#dres h3{margin:0 0 4px;font-size:22px}
+#dres ul{margin:6px 0 14px;padding-left:20px}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;font-size:13px;font-weight:600;background:var(--accent2);color:var(--accent)}
+footer{text-align:center;color:var(--muted);font-size:14px;padding:12px 0 40px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="badge">AI · Machine Learning · Smart Farming</span>
+  <h1>🌾 AgriSense</h1>
+  <p>Enter your soil and weather conditions and get data-driven crop recommendations in seconds.</p>
+</header>
+
+<section class="card">
+  <h2>Field conditions</h2>
+  <div class="grid" id="inputs"></div>
+  <div class="row">
+    <button class="primary" id="go">Recommend crop</button>
+    <button data-p="rice">Rice preset</button>
+    <button data-p="cotton">Cotton preset</button>
+    <button data-p="apple">Apple preset</button>
+  </div>
+</section>
+
+<section class="card" id="result" aria-live="polite">
+  <h2>Recommendation</h2>
+  <div class="top"><div class="emoji" id="em"></div><div><h3 id="best"></h3><small id="conf"></small></div></div>
+  <div id="bars"></div>
+</section>
+
+<section class="card">
+  <h2>📈 Yield estimator</h2>
+  <div class="grid">
+    <div><label for="yc">Crop</label><select id="yc" class="f"></select></div>
+    <div><label for="ya">Area (hectares)</label><input type="number" id="ya" class="f" min="0.1" step="0.1" value="1"></div>
+    <div><label for="yt">Avg temperature (°C)</label><input type="number" id="yt" class="f" value="26"></div>
+    <div><label for="yr">Season rainfall (mm)</label><input type="number" id="yr" class="f" min="0" value="700"></div>
+    <div><label for="yi">Irrigation</label><select id="yi" class="f"><option value="none">None (rain-fed)</option><option value="partial" selected>Partial</option><option value="full">Full</option></select></div>
+    <div><label for="yf">Fertilizer use</label><select id="yf" class="f"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+    <div><label for="ys">Soil quality</label><select id="ys" class="f"><option value="poor">Poor</option><option value="average" selected>Average</option><option value="good">Good</option></select></div>
+  </div>
+  <div class="row"><button class="primary" id="yb">Estimate yield</button></div>
+  <div id="yres" aria-live="polite"></div>
+  <p class="note">Rough estimate from typical Indian average yields adjusted for your conditions. Real yield also depends on variety, sowing date, pests and management.</p>
+</section>
+
+<section class="card">
+  <h2>💰 Profit calculator</h2>
+  <div class="grid">
+    <div><label for="pq">Expected yield (quintals)</label><input type="number" id="pq" class="f" min="0" step="0.1" value="0"></div>
+    <div><label for="pp">Selling price (₹ per quintal)</label><input type="number" id="pp" class="f" min="0" value="0"></div>
+    <div><label for="pc1">Seeds (₹)</label><input type="number" id="pc1" class="f" min="0" value="0"></div>
+    <div><label for="pc2">Fertilizer (₹)</label><input type="number" id="pc2" class="f" min="0" value="0"></div>
+    <div><label for="pc3">Labour (₹)</label><input type="number" id="pc3" class="f" min="0" value="0"></div>
+    <div><label for="pc4">Irrigation and power (₹)</label><input type="number" id="pc4" class="f" min="0" value="0"></div>
+    <div><label for="pc5">Pesticides (₹)</label><input type="number" id="pc5" class="f" min="0" value="0"></div>
+    <div><label for="pc6">Other: machinery, transport (₹)</label><input type="number" id="pc6" class="f" min="0" value="0"></div>
+  </div>
+  <div class="row"><button id="pu">Use yield from estimator</button><button class="primary" id="pb">Calculate profit</button></div>
+  <div id="pres" aria-live="polite"></div>
+  <p class="note">Enter the current mandi or MSP price for your crop and your total costs for the whole area.</p>
+</section>
+
+<section class="card">
+  <h2>🍃 Plant disease detection</h2>
+  <div class="drop">
+    <p style="margin:0 0 10px">Upload a clear photo of a single leaf (good light, leaf filling the frame).</p>
+    <input type="file" id="img" accept="image/*">
+    <img id="pv" alt="Leaf preview">
+  </div>
+  <div class="row" style="align-items:center">
+    <label for="lang" style="margin:0">🌐 Language</label>
+    <select id="lang" style="font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text)">
+      <option value="English">English</option>
+      <option value="Hindi">हिन्दी</option>
+      <option value="Marathi">मराठी</option>
+      <option value="Gujarati">ગુજરાતી</option>
+      <option value="Punjabi">ਪੰਜਾਬੀ</option>
+      <option value="Bengali">বাংলা</option>
+      <option value="Tamil">தமிழ்</option>
+      <option value="Telugu">తెలుగు</option>
+      <option value="Kannada">ಕನ್ನಡ</option>
+    </select>
+    <button class="primary" id="scan" disabled>Detect disease</button>
+  </div>
+  <div id="dres" aria-live="polite"></div>
+  <p class="note">AI visual analysis, not a lab test. Confirm serious cases with a local agriculture officer before spraying.</p>
+</section>
+
+<section class="card">
+  <h2>How it works</h2>
+  <div class="steps">
+    <div><b>1. Input</b>Soil N, P, K, pH plus temperature, humidity and rainfall.</div>
+    <div><b>2. Model</b>Inputs are compared with typical growing profiles of 15 crops.</div>
+    <div><b>3. Output</b>Top 3 crops ranked by how closely conditions match.</div>
+  </div>
+  <p class="note">This demo uses a nearest-profile matcher running in your browser. To use the Random Forest from your Python project, expose it through a Flask or FastAPI endpoint and call it from this page.</p>
+</section>
+<footer>AgriSense · Smart Agriculture AI/ML project</footer>
+</div>
+
+<script>
+var F=[["N","Nitrogen (N)",0,140,1,50],["P","Phosphorus (P)",5,145,1,50],["K","Potassium (K)",5,205,1,50],
+["temp","Temperature (°C)",8,44,0.5,25],["hum","Humidity (%)",14,100,1,70],["ph","Soil pH",3.5,9.5,0.1,6.5],["rain","Rainfall (mm)",20,300,1,100]];
+var S={N:60,P:50,K:70,temp:8,hum:25,ph:1,rain:80};
+// typical profiles: N,P,K,temp,hum,ph,rain
+var C={rice:["🌾",80,48,40,23.7,82,6.4,236],maize:["🌽",78,48,20,22.4,65,6.2,85],chickpea:["🫘",40,68,80,18.9,16,7.3,80],
+lentil:["🫘",19,68,19,24.5,64,6.9,46],blackgram:["🫘",40,67,19,30,65,7.1,68],mungbean:["🫘",21,47,20,28.5,85,6.7,48],
+banana:["🍌",100,82,50,27.4,80,6,104],mango:["🥭",20,27,30,31.2,50,5.8,95],grapes:["🍇",23,132,200,23.8,82,6,70],
+watermelon:["🍉",100,17,50,25.6,85,6.5,50],apple:["🍎",21,134,200,22.6,92,5.9,113],orange:["🍊",20,10,10,22.8,92,7,110],
+papaya:["🥭",50,59,50,33.7,92,6.7,143],coconut:["🥥",22,17,31,27.4,95,6,175],cotton:["☁️",118,46,20,24,80,6.9,80]};
+var K=["N","P","K","temp","hum","ph","rain"];
+var box=document.getElementById("inputs");
+F.forEach(function(f){var d=document.createElement("div");
+d.innerHTML='<label for="'+f[0]+'">'+f[1]+' <span id="v'+f[0]+'">'+f[5]+'</span></label><input type="range" id="'+f[0]+'" min="'+f[2]+'" max="'+f[3]+'" step="'+f[4]+'" value="'+f[5]+'">';
+box.appendChild(d);
+d.querySelector("input").addEventListener("input",function(e){document.getElementById("v"+f[0]).textContent=e.target.value;});});
+function setVals(a){K.forEach(function(k,i){var el=document.getElementById(k);el.value=a[i];document.getElementById("v"+k).textContent=a[i];});}
+function run(){
+ var x=K.map(function(k){return parseFloat(document.getElementById(k).value);});
+ var res=Object.keys(C).map(function(n){var p=C[n],d2=0;
+  K.forEach(function(k,i){var z=(x[i]-p[i+1])/S[k];d2+=z*z;});
+  return {n:n,e:p[0],w:Math.exp(-d2/4)};});
+ var tot=res.reduce(function(a,r){return a+r.w;},0)||1;
+ res.forEach(function(r){r.s=r.w/tot*100;});
+ res.sort(function(a,b){return b.s-a.s;});
+ var top=res.slice(0,3);
+ document.getElementById("em").textContent=top[0].e;
+ document.getElementById("best").textContent=top[0].n;
+ document.getElementById("conf").textContent="Match share: "+top[0].s.toFixed(1)+"%";
+ document.getElementById("bars").innerHTML=top.map(function(r){return '<div class="bar"><div class="l"><span>'+r.e+' '+r.n+'</span><span>'+r.s.toFixed(1)+'%</span></div><div class="t"><div class="f" style="width:'+Math.max(r.s,2)+'%"></div></div></div>';}).join("");
+ var r=document.getElementById("result");r.style.display="block";r.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+document.getElementById("go").addEventListener("click",run);
+(function(){
+var out=document.getElementById("pres");
+function n(id){var v=parseFloat(document.getElementById(id).value);return isNaN(v)||v<0?0:v;}
+function inr(v){return (v<0?"-":"")+"₹"+Math.round(Math.abs(v)).toLocaleString("en-IN");}
+function say(t){out.style.display="block";out.textContent=t;}
+function add(tag,t,cls){var e=document.createElement(tag);e.textContent=t;if(cls)e.className=cls;out.appendChild(e);return e;}
+document.getElementById("pu").addEventListener("click",function(){
+if(window.lastYQ){document.getElementById("pq").value=window.lastYQ.toFixed(1);say("Yield filled in from the estimator: "+window.lastYQ.toFixed(1)+" quintals. Now enter price and costs.");}
+else{say("Run the yield estimator first, then use this button.");}
+});
+document.getElementById("pb").addEventListener("click",function(){
+var q=n("pq"),p=n("pp"),cost=0;
+["pc1","pc2","pc3","pc4","pc5","pc6"].forEach(function(i){cost+=n(i);});
+if(q<=0||p<=0){say("Enter the expected yield and the selling price first.");return;}
+var rev=q*p,profit=rev-cost;
+out.textContent="";out.style.display="block";
+add("div",(profit>=0?"Profit ":"Loss ")+inr(Math.abs(profit)),"big"+(profit<0?" neg":""));
+add("div","Revenue "+inr(rev)+" \u00b7 Cost "+inr(cost)+" \u00b7 Margin "+(profit/rev*100).toFixed(1)+"%","note");
+var h=add("p","");h.style.margin="14px 0 0";var b=document.createElement("b");b.textContent="Break-even";h.appendChild(b);
+var u=document.createElement("ul");
+["Minimum price to cover costs: "+inr(cost/q)+" per quintal","Minimum yield to cover costs at your price: "+(cost/p).toFixed(1)+" quintals"].forEach(function(t){var li=document.createElement("li");li.textContent=t;u.appendChild(li);});
+out.appendChild(u);
+var h2=add("p","");h2.style.margin="14px 0 0";var b2=document.createElement("b");b2.textContent="If the price changes";h2.appendChild(b2);
+var u2=document.createElement("ul");
+[-0.2,-0.1,0.1].forEach(function(d){var pr=q*p*(1+d)-cost;var li=document.createElement("li");li.textContent=(d>0?"+":"")+Math.round(d*100)+"% price: "+(pr>=0?"profit ":"loss ")+inr(Math.abs(pr));u2.appendChild(li);});
+out.appendChild(u2);
+});
+})();
+(function(){
+var Y={rice:[4,26,1200],wheat:[3.5,20,450],maize:[3.2,24,650],cotton:[1.8,27,700],sugarcane:[70,27,1500],soybean:[1.1,25,700],chickpea:[1.1,21,400],groundnut:[1.8,27,600],potato:[22,18,500],tomato:[25,24,600],onion:[17,22,500],banana:[35,27,1500],orange:[12,25,900]};
+var sel=document.getElementById("yc"),out=document.getElementById("yres");
+Object.keys(Y).forEach(function(k){var o=document.createElement("option");o.value=k;o.textContent=k.charAt(0).toUpperCase()+k.slice(1);sel.appendChild(o);});
+function num(id,d){var v=parseFloat(document.getElementById(id).value);return isNaN(v)?d:v;}
+function fm(v){return v<10?v.toFixed(2):v.toFixed(1);}
+document.getElementById("yb").addEventListener("click",function(){
+var c=Y[sel.value],a=Math.max(num("ya",1),0.01),T=num("yt",25),R=Math.max(num("yr",0),0);
+var ir=document.getElementById("yi").value,fe=document.getElementById("yf").value,so=document.getElementById("ys").value;
+var tf=0.5+0.5*Math.exp(-Math.pow((T-c[1])/7,2));
+var ratio=(R+({none:0,partial:0.3,full:0.6})[ir]*c[2])/c[2];
+var rf=ratio<1?0.45+0.55*ratio:Math.max(0.6,1-0.25*(ratio-1));
+var ff=({low:0.8,medium:0.95,high:1.05})[fe],sf=({poor:0.8,average:1,good:1.1})[so];
+var perHa=c[0]*tf*rf*ff*sf,total=perHa*a;
+var tips=[];
+if(tf<0.85)tips.push("Temperature is away from this crop\u2019s ideal of about "+c[1]+"\u00b0C. Adjust sowing time or choose a better-suited variety.");
+if(ratio<0.85)tips.push("Water is limiting. More irrigation would raise yield.");
+if(ratio>1.3)tips.push("Rainfall is high. Ensure drainage to avoid waterlogging and disease.");
+if(ff<0.9)tips.push("Low fertilizer use is holding yield back. Follow a soil-test based dose.");
+if(sf<0.9)tips.push("Poor soil. Add compost or organic matter and correct pH.");
+if(!tips.length)tips.push("Conditions look well matched. Good timing and pest control will protect this yield.");
+out.textContent="";out.style.display="block";
+window.lastYQ=total*10;var b=document.createElement("div");b.className="big";b.textContent=fm(total)+" tonnes";out.appendChild(b);
+var s=document.createElement("div");s.className="note";
+s.textContent="\u2248 "+fm(total*10)+" quintals total \u00b7 "+fm(perHa)+" t/ha \u00b7 likely range "+fm(total*0.85)+" to "+fm(total*1.15)+" tonnes";out.appendChild(s);
+var h=document.createElement("p");h.style.margin="14px 0 0";var hb=document.createElement("b");hb.textContent="Condition scores";h.appendChild(hb);out.appendChild(h);
+var fl=document.createElement("ul");
+[["Temperature",tf],["Water",rf],["Fertilizer",ff],["Soil",sf]].forEach(function(x){var li=document.createElement("li");li.textContent=x[0]+": "+Math.round(x[1]*100)+"%";fl.appendChild(li);});
+out.appendChild(fl);
+var h2=document.createElement("p");h2.style.margin="14px 0 0";var hb2=document.createElement("b");hb2.textContent="How to improve";h2.appendChild(hb2);out.appendChild(h2);
+var tl=document.createElement("ul");tips.forEach(function(t){var li=document.createElement("li");li.textContent=t;tl.appendChild(li);});out.appendChild(tl);
+});
+})();
+(function(){
+var inp=document.getElementById("img"),pv=document.getElementById("pv"),btn=document.getElementById("scan"),out=document.getElementById("dres"),blob=null;
+function shrink(file){return new Promise(function(res,rej){var im=new Image(),u=URL.createObjectURL(file);im.onload=function(){var s=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(function(b){b?res(b):rej(new Error("fail"));},"image/jpeg",0.85);};im.onerror=function(){rej(new Error("bad"));};im.src=u;});}
+function msg(t){out.style.display="block";out.textContent=t;}
+function el(tag,txt,cls){var e=document.createElement(tag);e.textContent=txt;if(cls)e.className=cls;return e;}
+function list(title,arr){out.appendChild(el("b",title));var u=document.createElement("ul");(arr||[]).forEach(function(t){u.appendChild(el("li",String(t)));});out.appendChild(u);}
+inp.addEventListener("change",async function(){var f=inp.files[0];if(!f)return;out.style.display="none";try{blob=await shrink(f);var r=new FileReader();r.onload=function(){pv.src=r.result;pv.style.display="block";};r.readAsDataURL(blob);btn.disabled=false;}catch(e){blob=null;btn.disabled=true;msg("Could not read that image. Try a JPG or PNG.");}});
+btn.addEventListener("click",async function(){
+if(!blob)return;btn.disabled=true;msg("Analyzing leaf…");
+try{
+var s=await claude.use("sample");
+if(!s){msg("Image analysis is not available in this view. Open the page in claude.ai to use it.");return;}
+var L=document.getElementById("lang").value;var p='You are a plant pathologist. Look at this leaf photo. Write every text value in '+L+' using simple words a farmer understands (keep JSON keys and the confidence value in English). Reply ONLY with JSON: {"plant":string,"healthy":boolean,"disease":string,"confidence":"low"|"medium"|"high","symptoms":[string],"treatment":[string],"prevention":[string],"labels":{"symptoms":string,"treatment":string,"prevention":string,"confidence":string,"healthy":string}}. The labels are these section headings translated: Symptoms seen, Suggested treatment, Prevention, Confidence, Healthy. If the image is not a plant leaf, set plant to "Not a plant" and explain in symptoms. Keep each list to at most 4 short items. If healthy, disease is "None".';
+var r=await s.json(p,{images:[blob],cache:false});
+var B=r.labels||{};out.textContent="";out.style.display="block";
+out.appendChild(el("h3",(r.healthy?(B.healthy||"Healthy")+" ":"")+(r.plant||"Plant")+(r.healthy?"":": "+(r.disease||"Unknown"))));
+out.appendChild(el("span",(B.confidence||"Confidence")+": "+(r.confidence||"unknown"),"pill"));
+out.appendChild(document.createElement("br"));out.appendChild(document.createElement("br"));
+list(B.symptoms||"Symptoms seen",r.symptoms);
+if(!r.healthy){list(B.treatment||"Suggested treatment",r.treatment);}
+list(B.prevention||"Prevention",r.prevention);
+}catch(e){
+if(e&&e.code==="not_granted")msg("Permission was not granted, so the image can\u2019t be analyzed.");
+else if(e&&e.code==="rate_limited")msg("Too many requests. Please wait a moment and try again.");
+else msg("Analysis failed. Try another photo.");
+}finally{btn.disabled=false;}
+});
+})();
+document.querySelectorAll("button[data-p]").forEach(function(b){b.addEventListener("click",function(){var p=C[b.dataset.p];setVals(p.slice(1));run();});});
+</script>
+</body>
+</html>
